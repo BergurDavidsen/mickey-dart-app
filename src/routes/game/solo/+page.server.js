@@ -17,3 +17,15 @@ export const load = ({ url }) => {
     return {room, user};
     
 }
+
+export const actions = {
+    endGame: async({request,url}) => {
+        const gameData = await request.formData();
+        const user = gameData.get("username");
+        const stats = gameData.get("stats");
+
+        throw redirect(303, `/game/end?gameStats=${stats}&username=${user}`);
+    }
+
+}
+

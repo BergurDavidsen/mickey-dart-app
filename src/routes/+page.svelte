@@ -1,10 +1,25 @@
 <script>
-	let username = '';
-	let joiningRoom = false;
-	let creatingRoom = false;
+	import { onMount } from 'svelte';
+	import { io } from '$lib/webSocketConnection.js';
 
 	export let form;
+	let username = '';
+	let roomPin = '';
+	let joiningRoom = false;
+	let creatingRoom = false;
+	let currentRoomPins = [];
 
+	onMount(()=>{
+		io.emit("opened-page");
+
+		io.on("valid-room-pins", (validRoomPins) =>{
+			currentRoomPins = validRoomPins;
+		})
+
+		io.on("new-room-created", (validRoomPins)=>{
+			currentRoomPins = validRoomPins;
+		})
+	})
 	function handleCreate() {
 		creatingRoom = true;
 		joiningRoom = false;
@@ -49,11 +64,18 @@
 					bind:value={username}
 				/>
 				<label class="m-2" for="room">Room Pin</label>
-				<input class="m-2 p-2 border-black border rounded-md shadow-md" type="text" name="room" />
-				<button
+				<input class="m-2 p-2 border-black border rounded-md shadow-md" type="text" name="room" bind:value={roomPin} />
+				{#if currentRoomPins.length>0 && currentRoomPins.includes(roomPin)}
+					<button
 					class="m-2 text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
 					type="submit">Join Room</button
 				>
+				{:else if currentRoomPins.length < 1}
+					<p>No rooms vailable to join</p>
+				{:else}
+					<p>Enter room pin to join</p>		 
+				{/if}
+
 			</form>
 			<button class="ml-2 hover:underline text-md" on:click={() => (joiningRoom = false)}
 				>Close</button
@@ -75,8 +97,6 @@
 					name="user"
 					bind:value={username}
 				/>
-				<label class="m-2" for="room">Room Pin</label>
-				<input class="m-2 p-2 border-black border rounded-md shadow-md" type="text" name="room" />
 				<button
 					class="m-2 text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
 					type="submit">Create Room</button

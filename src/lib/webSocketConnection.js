@@ -1,5 +1,6 @@
 import ioClient from 'socket.io-client';
-const ENDPOINT = 'http://localhost:3000';
+import { env } from '$env/dynamic/public'
+const ENDPOINT = env.URL;
 
 const socket = ioClient(ENDPOINT);
 

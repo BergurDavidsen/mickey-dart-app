@@ -1,26 +1,50 @@
+import { redirect } from '@sveltejs/kit';
 import { Server } from 'socket.io';
 
 
 export default function injectSocketIO(server) {
     const io = new Server(server);
     let socketsToUser = {};
-    const roomPlayers = {}; // Object to track players in each room
+    const roomPlayers = {};
+    const gameStarted = {};
+    const validRoomPins = [] // Object to track players in each room
     
     io.on('connection', (socket) => {
-        socket.on("join-room", (room, name)=>{
+        socket.on("join-room", (room, name, isStarted)=>{
             
-            socket.join(room);
-            console.log("joined room: "+room + " User: "+name);
+            if(gameStarted[room]){
+                socket.emit('gameAlreadyStarted')
+                return
+            }
+
             if (!roomPlayers[room]) {
                 roomPlayers[room] = [];
+                validRoomPins.push(room);
+                console.log(validRoomPins)
+                io.emit("new-room-created", validRoomPins)
             }
             
             if (!roomPlayers[room].includes(name)) {
                 roomPlayers[room].push(name);
             }
+
+            socket.join(room)
+            console.log("joined room: "+room + " User: "+name);
             socketsToUser[socket.id]=name;
             io.to(room).emit("people-in-room", roomPlayers[room]);
         });
+        socket.on("opened-page",()=>{
+            console.log(validRoomPins, "player opened page")
+            io.emit("valid-room-pins", validRoomPins);
+        })
+        socket.on("startGame", (room, user)=>{
+            if(gameStarted[room]){
+                return
+            }
+            gameStarted[room] = true;
+            io.to(room).emit("isStarted", user);
+        })
+
         socket.on('disconnect',() => {
             let name = socketsToUser[socket.id]
             let currentRooms = Object.keys(roomPlayers);
@@ -30,6 +54,15 @@ export default function injectSocketIO(server) {
                 if(index !== -1){
                     roomPlayers[room].splice(index,1);
                     io.to(room).emit("remove-player", name)
+                    
+                }
+                if(roomPlayers[room].length<1){
+                    console.log(validRoomPins, "before");
+                     validRoomPins.splice(validRoomPins.indexOf(room),1);
+                     console.log(validRoomPins);
+                     delete roomPlayers[room];
+                     console.log(roomPlayers);
+                     io.emit("room-deleted", validRoomPins)
                 }
             }
 
